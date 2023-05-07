@@ -20,9 +20,9 @@ class EngineConfigurationError(sgtk.TankError):
     pass
 
 
-class AfterEffectsLauncher(SoftwareLauncher):
+class PremiereProLauncher(SoftwareLauncher):
     """
-    Handles the launching of After Effects. Contains the logic for
+    Handles the launching of PremierePro. Contains the logic for
     scanning for installed versions of the software and
     how to correctly set up a launch environment for the tk-aftereffects
     engine.
@@ -48,16 +48,16 @@ class AfterEffectsLauncher(SoftwareLauncher):
     # "CC" part of the path.
     EXECUTABLE_MATCH_TEMPLATES = [
         {
-            # /Applications/Adobe After Effects 2020/After Effects 2020.app
-            "darwin": "/Applications/Adobe After Effects {version}/Adobe After Effects {version_back}.app",
-            # C:\program files\Adobe\Adobe After Effects 2020\AfterFX.exe
-            "win32": "C:/Program Files/Adobe/Adobe After Effects {version}/Support Files/AfterFX.exe",
+            # /Applications/Adobe Premiere Pro 2020/Premiere Pro 2020.app
+            "darwin": "/Applications/Adobe Premiere Pro {version}/Adobe Premiere Pro {version_back}.app",
+            # C:\program files\Adobe\Adobe Premiere Pro 2020\PremierePro.exe
+            "win32": "C:/Program Files/Adobe/Adobe Premiere Pro {version}/Support Files/PremierePro.exe",
         },
         {
-            # /Applications/Adobe After Effects CC 2017/After Effects CC 2017.app
-            "darwin": "/Applications/Adobe After Effects CC {version}/Adobe After Effects CC {version_back}.app",
-            # C:\program files\Adobe\Adobe After Effects CC 2017\AfterFX.exe
-            "win32": "C:/Program Files/Adobe/Adobe After Effects CC {version}/Support Files/AfterFX.exe",
+            # /Applications/Adobe Premiere Pro CC 2017/Premiere Pro CC 2017.app
+            "darwin": "/Applications/Adobe Premiere Pro CC {version}/Adobe Premiere Pro CC {version_back}.app",
+            # C:\program files\Adobe\Adobe Premiere Pro CC 2017\PremierePro.exe
+            "win32": "C:/Program Files/Adobe/Adobe Premiere Pro CC {version}/Support Files/PremierePro.exe",
         },
     ]
 
@@ -70,7 +70,7 @@ class AfterEffectsLauncher(SoftwareLauncher):
 
     def prepare_launch(self, exec_path, args, file_to_open=None):
         """
-        Prepares an environment to launch After Effects so that will automatically
+        Prepares an environment to launch Premiere Pro so that will automatically
         load Toolkit after startup.
 
         :param str exec_path: Path to Maya executable to launch.
@@ -94,12 +94,12 @@ class AfterEffectsLauncher(SoftwareLauncher):
 
     def scan_software(self):
         """
-        Scan the filesystem for all After Effects executables.
+        Scan the filesystem for all Premiere Pro executables.
 
         :return: A list of :class:`SoftwareVersion` objects.
         """
 
-        self.logger.debug("Scanning for After Effects executables...")
+        self.logger.debug("Scanning for Premiere Pro executables...")
 
         # use the bundled icon
         icon_path = os.path.join(self.disk_location, "icon_256.png")
@@ -114,7 +114,7 @@ class AfterEffectsLauncher(SoftwareLauncher):
         )
 
         if platform is None:
-            self.logger.debug("After Effects not supported on this platform.")
+            self.logger.debug("Premiere Pro not supported on this platform.")
             return []
 
         all_sw_versions = []
@@ -131,7 +131,7 @@ class AfterEffectsLauncher(SoftwareLauncher):
                 executable_version = tokens.get("version")
 
                 sw_version = SoftwareVersion(
-                    executable_version, "After Effects CC", executable_path, icon_path
+                    executable_version, "Premiere Pro CC", executable_path, icon_path
                 )
                 supported, reason = self._is_supported(sw_version)
                 if supported:
@@ -143,10 +143,10 @@ class AfterEffectsLauncher(SoftwareLauncher):
 
     def compute_environment(self):
         """
-        Return the env vars needed to launch the After Effects plugin.
+        Return the env vars needed to launch the Premiere Pro plugin.
 
         This will generate a dictionary of environment variables
-        needed in order to launch the After Effects plugin.
+        needed in order to launch the Premiere Pro plugin.
 
         :returns: dictionary of env var string key/value pairs.
         """
@@ -167,7 +167,7 @@ class AfterEffectsLauncher(SoftwareLauncher):
         # set the interpreter with which to launch the CC integration
         env["SHOTGUN_ADOBE_PYTHON"] = sys.executable
         env["SHOTGUN_ADOBE_FRAMEWORK_LOCATION"] = framework_location
-        env["SHOTGUN_ENGINE"] = "tk-aftereffects"
+        env["SHOTGUN_ENGINE"] = "tk-premierepro"
 
         # We're going to append all of this Python process's sys.path to the
         # PYTHONPATH environment variable. This will ensure that we have access
@@ -204,12 +204,12 @@ class AfterEffectsLauncher(SoftwareLauncher):
         env_name = engine.environment.get("name")
 
         env = engine.sgtk.pipeline_configuration.get_environment(env_name)
-        engine_desc = env.get_engine_descriptor("tk-aftereffects")
+        engine_desc = env.get_engine_descriptor("tk-premierepro")
         if env_name is None:
             self.logger.warn(
                 (
                     "The current environment {!r} "
-                    "is not configured to run the tk-aftereffects "
+                    "is not configured to run the tk-premierepro "
                     "engine. Please add the engine to your env-file: "
                     "{!r}"
                 ).format(env, env.disk_location)
@@ -227,7 +227,7 @@ class AfterEffectsLauncher(SoftwareLauncher):
         else:
             self.logger.warn(
                 (
-                    "The engine tk-aftereffects must have "
+                    "The engine tk-premierepro must have "
                     "the tk-framework-adobe configured in order to run"
                 )
             )

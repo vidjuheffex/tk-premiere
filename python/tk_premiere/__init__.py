@@ -44,17 +44,22 @@ if sgtk.util.is_windows():
 class AdobeItemTypes:
     """
     This class stores some constants in order to expose certain important
-    adobe aftereffects internal class names within python
+    adobe premierepro internal class names within python
     """
 
     #: :obj:`str`
-    #: The adobe.CompItem's internal typename
-    COMP_ITEM = "CompItem"
+    #: The adobe.ProjectItem's internal typename
+    PROJECT_ITEM = "ProjectItem"
 
-    #: :obj:`str`
-    #: The adobe.FolderItem's internal typename
-    FOLDER_ITEM = "FolderItem"
+    # TODO: Determing Types needed here
+    # The Premiere API differs from After Effects here.
+    # In Premiere all of these type are the same: ProjectItem
+    # Differing only in their .type being CLIP BIN ROOT or FILE
 
-    #: :obj:`str`
-    #: The adobe.FootageItem's internal typename
-    FOOTAGE_ITEM = "FootageItem"
+    # #: :obj:`str`
+    # #: The adobe.FolderItem's internal typename
+    # FOLDER_ITEM = "FolderItem"
+
+    # #: :obj:`str`
+    # #: The adobe.FootageItem's internal typename
+    # #FOOTAGE_ITEM = "FootageItem"
