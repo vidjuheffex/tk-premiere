@@ -57,8 +57,8 @@ configuration:
 requires_shotgun_fields:
 
 # More verbose description of this item
-display_name: "ShotGrid Engine for After Effects CC"
-description: "ShotGrid Integration for After Effects CC"
+display_name: "ShotGrid Engine for Premiere Pro CC"
+description: "ShotGrid Integration for Premiere Pro CC"
 
 # Required minimum versions for this item to run
 requires_shotgun_version:

@@ -15,7 +15,6 @@ import sgtk
 import sgtk.platform.framework
 from sgtk.platform import SoftwareLauncher, SoftwareVersion, LaunchInformation
 
-
 class EngineConfigurationError(sgtk.TankError):
     pass
 
