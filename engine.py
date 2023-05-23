@@ -25,9 +25,9 @@ from sgtk.util.filesystem import ensure_folder_exists
 from tank_vendor import six
 
 
-class AfterEffectsEngine(sgtk.platform.Engine):
+class PremiereProEngine(sgtk.platform.Engine):
     """
-    An After Effects CC engine for Shotgun Toolkit.
+    A Premiere Pro CC engine for Shotgun Toolkit.
     """
 
     # the maximum size for a generated thumbnail
@@ -57,29 +57,30 @@ class AfterEffectsEngine(sgtk.platform.Engine):
     _CHECK_CONNECTION_TIMER = None
     _CONTEXT_CHANGES_DISABLED = False
     _DIALOG_PARENT = None
-    _WIN32_AFTEREFFECTS_MAIN_HWND = None
+    _WIN32_PREMIEREPRO_MAIN_HWND = None
     _PROXY_WIN_HWND = None
     _HEARTBEAT_DISABLED = False
     _PROJECT_CONTEXT = None
-    _AFX_PID = None
+    _PPRO_PID = None
     _POPUP_CACHE = None
-    _AFX_WIN32_DIALOG_WINDOW_CLASS = "#32770"  # the windows window class name used by After Effects for modal dialogs
+    # TODO: Use Spy++ on windows to indentify modal class id
+    _PPRO_WIN32_DIALOG_WINDOW_CLASS = "#32770"  # the windows window class name used by After Effects for modal dialogs
     __WIN32_GW_CHILD = 5
-    _CONTEXT_CACHE_KEY = "aftereffects_context_cache"
+    _CONTEXT_CACHE_KEY = "premierepro_context_cache"
 
     _HAS_CHECKED_CONTEXT_POST_LAUNCH = False
 
+    # TODO: Find better source on internal versions 2016-2018
+    # Only support 15+ as we use app.getCurrentProjectViewSelection()
+    
     __CC_VERSION_MAPPING = {
-        12: "2015",
-        13: "2016",
-        14: "2017",
-        15: "2018",
-        16: "2019",
-        17: "2020",
-        18: "2021",
-        22: "2022",
-        23: "2023",
-        24: "2024",
+         15: "2021",
+         16: "2019",
+         17: "2020",
+         18: "2021",
+         22: "2022",
+         23: "2023",
+         24: "2024",
     }
 
     __IS_SEQUENCE_REGEX = re.compile("[\[]?([#@]+|[%]0\dd)[\]]?")
@@ -138,7 +139,7 @@ class AfterEffectsEngine(sgtk.platform.Engine):
         any apps are loaded.
         """
         # import and keep a handle on the bundled python module
-        self.__tk_aftereffects = self.import_module("tk_aftereffects")
+        self.__tk_aftereffects = self.import_module("tk_premierepro")
 
         # constant command uid lookups for these special commands
         self.__jump_to_sg_command_id = self.__get_command_uid()
@@ -146,7 +147,7 @@ class AfterEffectsEngine(sgtk.platform.Engine):
 
         # get the adobe instance. it may have been initialized already by a
         # previous instance of the engine. if not, initialize a new one.
-        self._adobe = self.__tk_aftereffects.AdobeBridge.get_or_create(
+        self._adobe = self.__tk_premierepro.AdobeBridge.get_or_create(
             identifier=self.instance_name,
             port=self._SHOTGUN_ADOBE_PORT,
             logger=self.logger,
@@ -166,8 +167,8 @@ class AfterEffectsEngine(sgtk.platform.Engine):
 
         # in order to use frameworks, they have to be imported via
         # import_module. so they're exposed in the bundled python.
-        shotgun_data = self.__tk_aftereffects.shotgun_data
-        settings = self.__tk_aftereffects.shotgun_settings
+        shotgun_data = self.__tk_premierepro.shotgun_data
+        settings = self.__tk_premierepro.shotgun_settings
         # keep a handle for shotgun globals as they are needed in other
         # functions as well
         self.__shotgun_globals = self.__tk_aftereffects.shotgun_globals
@@ -238,7 +239,7 @@ class AfterEffectsEngine(sgtk.platform.Engine):
 
         if file_to_open:
             # open the specified script
-            self.adobe.app.open(self.adobe.File(file_to_open))
+            self.adobe.app.openDocument(self.adobe.File(file_to_open))
             # clear the environment variable after loading so that it doesn't get reopened on an engine restart.
             del os.environ["SGTK_FILE_TO_OPEN"]
 
@@ -249,7 +250,7 @@ class AfterEffectsEngine(sgtk.platform.Engine):
         self.logger.debug("Destroying engine...")
 
         # Set our parent widget back to being owned by the window manager
-        # instead of After Effects's application window.
+        # instead of Premiere Pro's application window.
         if self._PROXY_WIN_HWND and sgtk.util.is_windows():
             self.__tk_aftereffects.win_32_api.SetParent(self._PROXY_WIN_HWND, 0)
 
@@ -310,7 +311,7 @@ class AfterEffectsEngine(sgtk.platform.Engine):
         """
         properties = properties or dict()
         properties["uid"] = self.__get_command_uid()
-        return super(AfterEffectsEngine, self).register_command(
+        return super(PremiereProEngine, self).register_command(
             name,
             callback,
             properties,
@@ -322,24 +323,24 @@ class AfterEffectsEngine(sgtk.platform.Engine):
         Returns information about the application hosting this engine.
 
         :returns: A {"name": application name, "version": application version}
-                  dictionary. eg: {"name": "AfterFX", "version": "2017.1.1"}
+                  dictionary. eg: {"name": "PremierePro", "version": "2017.1.1"}
         """
         if not self.adobe:
             # Don't error out if the bridge was not yet started
-            return {"name": "AfterFX", "version": "unknown"}
+            return {"name": "PremierePro", "version": "unknown"}
 
         version = self.adobe.app.version
-        # app.aftereffects.AfterEffectsVersion just returns 18.1.1 which is not what users see in the UI
+        # app.premierepro.PremiereProVersion just returns 18.1.1 which is not what users see in the UI
         # extract a more meaningful version from the systemInformation property
         # which gives something like:
-        # Adobe After Effects Version: 2017.1.1 20170425.r.252 2017/04/25:23:00:00 CL 1113967  x64\rNumber of .....
+        # Adobe Premiere Pro Version: 2017.1.1 20170425.r.252 2017/04/25:23:00:00 CL 1113967  x64\rNumber of .....
         # and use it instead if available.
         regex = re.compile(r"(\d+\.?\d*)")
         match = regex.search(six.ensure_str(version))
         major = int(float(match[0]))
         cc_version = self.__CC_VERSION_MAPPING.get(major, version)
         return {
-            "name": "AfterFX",
+            "name": "PremierePro",
             "version": cc_version,
         }
 
@@ -354,13 +355,7 @@ class AfterEffectsEngine(sgtk.platform.Engine):
         :returns: The current project path or an empty string
         :rtype: str
         """
-        doc_obj = self.adobe.app.project.file
-        doc_path = ""
-        # doc_obj will always be a ProxyWrapper instance so we cannot
-        # use the `doc_obj is not None` comparison
-        if doc_obj is not None:
-            doc_path = doc_obj.fsName
-        return doc_path
+        return self.adobe.app.project.file
 
     def save(self, path=None):
         """
@@ -374,10 +369,10 @@ class AfterEffectsEngine(sgtk.platform.Engine):
             if path is None:
                 self.adobe.app.project.save()
             else:
-                # After Effects won't ensure that the folder is
+                # Premiere Pro won't ensure that the folder is
                 # created when saving, so we must make sure it exists
                 ensure_folder_exists(os.path.dirname(path))
-                self.adobe.app.project.save(self.adobe.File(path))
+                self.adobe.app.project.saveAs(self.adobe.File(path))
             new_path = self.project_path
             self.logger.info("Saved file to to {!r}".format(new_path))
 
@@ -391,14 +386,14 @@ class AfterEffectsEngine(sgtk.platform.Engine):
 
         doc_path = self.project_path
 
-        # After Effects doesn't appear to have a
+        # Premiere Pro doesn't appear to have a
         # "save as" dialog accessible via
         # python. so open our own Qt file dialog.
         file_dialog = QtGui.QFileDialog(
             parent=self._get_dialog_parent(),
             caption="Save As",
             directory=doc_path,
-            filter="After Effects Documents (*.aep, *.aepx)",
+            filter="Premiere Pro Documents (*.pproj)",
         )
         file_dialog.setLabelText(QtGui.QFileDialog.Accept, "Save")
         file_dialog.setLabelText(QtGui.QFileDialog.Reject, "Cancel")
@@ -411,6 +406,7 @@ class AfterEffectsEngine(sgtk.platform.Engine):
         if path:
             self.save(path)
 
+    # TODO: Head to AdobeItemTypes
     @property
     def AdobeItemTypes(self):
         """
@@ -443,7 +439,7 @@ class AfterEffectsEngine(sgtk.platform.Engine):
         :returns: The active item
         :rtype: `adobe.ItemObject`_
         """
-        return self.adobe.app.project.activeItem
+        return self.adobe.app.getCurrentProjectViewSelection()
 
     def is_adobe_sequence(self, path):
         """
@@ -501,39 +497,41 @@ class AfterEffectsEngine(sgtk.platform.Engine):
         for i in range(1, collection_item.length + 1):
             yield collection_item[i]
 
-    def get_render_files(self, path, queue_item):
-        """
-        Yields all render-files and its frame number of a given
-        after effects render queue item.
+    # TODO: Remove this method after removing any lingering callsites
+    # def get_render_files(self, path, queue_item):
+    #     """
+    #     Yields all render-files and its frame number of a given
+    #     after effects render queue item.
 
-        The path is needed to uniquely identify the correct output_module
+    #     The path is needed to uniquely identify the correct output_module
 
-        :param str path: filepath to iter
-        :param queue_item: an after effects render queue item
-        :type queue_item: `adobe.RenderQueueItemObject`_
-        :yields: 2-item-tuple where the firstitem is the resolved path (str)
-                of the render file and the second item the frame-number or
-                None if the path is not an image-sequence.
-        :rtype: tuple
-        """
-        # is the given render-path a sequence?
-        match = re.search(self.__IS_SEQUENCE_REGEX, path)
-        if not match:
-            # if not, we just check if the file exists
-            yield path, None
-            return  # Exit the iterator
+    #     :param str path: filepath to iter
+    #     :param queue_item: an after effects render queue item
+    #     :type queue_item: `adobe.RenderQueueItemObject`_
+    #     :yields: 2-item-tuple where the firstitem is the resolved path (str)
+    #             of the render file and the second item the frame-number or
+    #             None if the path is not an image-sequence.
+    #     :rtype: tuple
+    #     """
+    #     # is the given render-path a sequence?
+    #     match = re.search(self.__IS_SEQUENCE_REGEX, path)
+    #     if not match:
+    #         # if not, we just check if the file exists
+    #         yield path, None
+    #         return  # Exit the iterator
 
-        # if yes, we check the existence of each frame
-        frame_time = queue_item.comp.frameDuration
-        start_time = int(round(queue_item.timeSpanStart / frame_time, 3))
-        frame_numbers = int(round(queue_item.timeSpanDuration / frame_time, 3))
-        skip_frames = queue_item.skipFrames + 1
-        padding = len(match.group(1))
+    #     # if yes, we check the existence of each frame
+    #     frame_time = queue_item.comp.frameDuration
+    #     start_time = int(round(queue_item.timeSpanStart / frame_time, 3))
+    #     frame_numbers = int(round(queue_item.timeSpanDuration / frame_time, 3))
+    #     skip_frames = queue_item.skipFrames + 1
+    #     padding = len(match.group(1))
 
-        test_path = path.replace(match.group(0), "%%0%dd" % padding)
-        for frame_no in range(start_time, start_time + frame_numbers, skip_frames):
-            yield test_path % frame_no, frame_no
+    #     test_path = path.replace(match.group(0), "%%0%dd" % padding)
+    #     for frame_no in range(start_time, start_time + frame_numbers, skip_frames):
+    #         yield test_path % frame_no, frame_no
 
+    # TODO: dive into Adobe.File
     def import_filepath(self, path):
         """
         Helper method to import footage into the current comp.
@@ -561,7 +559,8 @@ class AfterEffectsEngine(sgtk.platform.Engine):
 
         return self.__import_file(import_options)
 
-    def add_items_to_comp(self, item_collection, comp_item):
+    # TODO: return after AdobeItemTypes exploration
+    def add_items_to_timeline(self, item_collection, comp_item):
         """
         Helper method that adds the "best-matching" items from a given
         adobe.CollectionItem into a given CompItem. Where "best-matching"
